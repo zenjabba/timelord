@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    body {
+        font-family: -apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-size: 11px;
+        line-height: 1.5;
+        color: #1a1a1a;
+        padding: 40px;
+        background: #ffffff;
+    }
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 32px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e5e5e5;
+    }
+    .business-info h1 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 4px;
+    }
+    .business-info p {
+        font-size: 10px;
+        color: #666666;
+        line-height: 1.6;
+    }
+    .invoice-title {
+        text-align: right;
+    }
+    .invoice-title h2 {
+        font-size: 28px;
+        font-weight: 800;
+        color: #1a1a1a;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+    }
+    .invoice-title .status {
+        display: inline-block;
+        font-size: 9px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: #f0f0f0;
+        color: #666666;
+    }
+    .details-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 28px;
+    }
+    .bill-to {
+        flex: 1;
+    }
+    .bill-to .label {
+        font-size: 9px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #999999;
+        margin-bottom: 6px;
+    }
+    .bill-to .client-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+    .bill-to .client-email {
+        font-size: 10px;
+        color: #666666;
+    }
+    .invoice-meta {
+        text-align: right;
+    }
+    .invoice-meta table {
+        margin-left: auto;
+        border-collapse: collapse;
+    }
+    .invoice-meta td {
+        padding: 3px 0;
+        font-size: 10px;
+    }
+    .invoice-meta td:first-child {
+        color: #999999;
+        text-transform: uppercase;
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        padding-right: 16px;
+    }
+    .invoice-meta td:last-child {
+        font-weight: 500;
+        color: #1a1a1a;
+    }
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 24px;
+    }
+    .items-table thead th {
+        font-size: 9px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #999999;
+        padding: 8px 0;
+        border-bottom: 2px solid #e5e5e5;
+        text-align: left;
+    }
+    .items-table thead th.number {
+        text-align: right;
+    }
+    .items-table tbody td {
+        padding: 10px 0;
+        font-size: 11px;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: top;
+    }
+    .items-table tbody td.number {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    .totals {
+        margin-left: auto;
+        width: 260px;
+        border-collapse: collapse;
+        margin-bottom: 28px;
+    }
+    .totals tr td {
+        padding: 5px 0;
+        font-size: 11px;
+    }
+    .totals tr td:first-child {
+        color: #666666;
+    }
+    .totals tr td:last-child {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    .totals .total-row td {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1a1a1a;
+        padding-top: 10px;
+        border-top: 2px solid #1a1a1a;
+    }
+    .notes-section {
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid #e5e5e5;
+    }
+    .notes-section .label {
+        font-size: 9px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #999999;
+        margin-bottom: 6px;
+    }
+    .notes-section p {
+        font-size: 10px;
+        color: #666666;
+        line-height: 1.6;
+    }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="business-info">
+        <h1>{{businessName}}</h1>
+        <p>{{businessAddress}}</p>
+    </div>
+    <div class="invoice-title">
+        <h2>INVOICE</h2>
+        <span class="status">{{status}}</span>
+    </div>
+</div>
+
+<div class="details-row">
+    <div class="bill-to">
+        <div class="label">Bill To</div>
+        <div class="client-name">{{clientName}}</div>
+        <div class="client-email" style="display: {{clientEmailDisplay}}">{{clientEmail}}</div>
+    </div>
+    <div class="invoice-meta">
+        <table>
+            <tr>
+                <td>Invoice No.</td>
+                <td>{{invoiceNumber}}</td>
+            </tr>
+            <tr>
+                <td>Issue Date</td>
+                <td>{{issueDate}}</td>
+            </tr>
+            <tr style="display: {{dueDateDisplay}}">
+                <td>Due Date</td>
+                <td>{{dueDate}}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<table class="items-table">
+    <thead>
+        <tr>
+            <th>Description</th>
+            <th class="number">Hours</th>
+            <th class="number">Rate</th>
+            <th class="number">Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{lineItems}}
+    </tbody>
+</table>
+
+<table class="totals">
+    <tr>
+        <td>Subtotal</td>
+        <td>{{subtotal}}</td>
+    </tr>
+    <tr style="display: {{taxDisplay}}">
+        <td>Tax ({{taxRate}})</td>
+        <td>{{taxAmount}}</td>
+    </tr>
+    <tr class="total-row">
+        <td>Total</td>
+        <td>{{totalAmount}}</td>
+    </tr>
+</table>
+
+<div class="notes-section" style="display: {{notesDisplay}}">
+    <div class="label">Notes</div>
+    <p>{{notes}}</p>
+</div>
+
+</body>
+</html>
