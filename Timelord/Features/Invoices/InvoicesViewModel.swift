@@ -21,24 +21,25 @@ final class InvoicesViewModel {
     // MARK: - Filtering
 
     func unbilledEntries(from entries: [TimeEntry]) -> [TimeEntry] {
-        entries.filter { entry in
+        let calendar = Calendar.current
+        let rangeStart = calendar.startOfDay(for: dateRangeStart)
+        let rangeEnd = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: calendar.startOfDay(for: dateRangeEnd)) ?? dateRangeEnd
+
+        return entries.filter { entry in
             guard entry.isBillable else { return false }
             guard !entry.isRunning else { return false }
 
-            // Must belong to selected client
             if let selectedClient {
                 guard entry.project?.client?.id == selectedClient.id else { return false }
             } else {
                 return false
             }
 
-            // Not already on an invoice
             let existingLineItems = entry.invoiceLineItems ?? []
             guard existingLineItems.isEmpty else { return false }
 
-            // Within date range
-            guard entry.startDate >= dateRangeStart else { return false }
-            guard entry.startDate <= dateRangeEnd else { return false }
+            guard entry.startDate >= rangeStart else { return false }
+            guard entry.startDate <= rangeEnd else { return false }
 
             return true
         }
@@ -46,44 +47,36 @@ final class InvoicesViewModel {
 
     // MARK: - Line Item Generation
 
-    func generateLineItems(from entries: [TimeEntry]) -> [InvoiceLineItem] {
-        let filtered = unbilledEntries(from: entries)
+    private struct ProjectGroup {
+        let project: Project
+        let entries: [TimeEntry]
+    }
 
-        // Group by project
-        var grouped: [UUID: (project: Project, entries: [TimeEntry])] = [:]
-        for entry in filtered {
+    private func groupedByProject(_ entries: [TimeEntry]) -> [ProjectGroup] {
+        var grouped: [UUID: ProjectGroup] = [:]
+        for entry in entries {
             guard let project = entry.project else { continue }
-            let key = project.id
-            if grouped[key] != nil {
-                grouped[key]?.entries.append(entry)
-            } else {
-                grouped[key] = (project: project, entries: [entry])
-            }
+            let existing = grouped[project.id]?.entries ?? []
+            grouped[project.id] = ProjectGroup(project: project, entries: existing + [entry])
         }
+        return grouped.values.sorted { $0.project.name < $1.project.name }
+    }
 
-        var lineItems: [InvoiceLineItem] = []
-        let sortedKeys = grouped.keys.sorted { lhs, rhs in
-            (grouped[lhs]?.project.name ?? "") < (grouped[rhs]?.project.name ?? "")
-        }
+    func generateLineItems(from entries: [TimeEntry]) -> [InvoiceLineItem] {
+        let groups = groupedByProject(unbilledEntries(from: entries))
 
-        for (index, key) in sortedKeys.enumerated() {
-            guard let group = grouped[key] else { continue }
-            let project = group.project
+        return groups.enumerated().map { index, group in
             let totalDuration = group.entries.reduce(TimeInterval.zero) { $0 + $1.duration }
             let hours = RoundingService.roundedHours(duration: totalDuration, rule: roundingRule)
-            let rate = project.hourlyRate ?? 0
+            let rate = group.project.hourlyRate ?? 0
 
-            let item = InvoiceLineItem(
-                descriptionText: project.name,
+            return InvoiceLineItem(
+                descriptionText: group.project.name,
                 quantity: hours,
                 unitPrice: rate,
                 sortOrder: index
             )
-
-            lineItems.append(item)
         }
-
-        return lineItems
     }
 
     // MARK: - Invoice Creation
@@ -110,34 +103,32 @@ final class InvoicesViewModel {
             invoice.taxRate = parsedTax
         }
 
-        let lineItems = generateLineItems(from: entries)
-        let filtered = unbilledEntries(from: entries)
-
-        // Group entries by project to link them to line items
-        var entriesByProject: [UUID: [TimeEntry]] = [:]
-        for entry in filtered {
-            guard let project = entry.project else { continue }
-            entriesByProject[project.id, default: []].append(entry)
-        }
-
+        let groups = groupedByProject(unbilledEntries(from: entries))
         context.insert(invoice)
 
-        for item in lineItems {
+        var lineItems: [InvoiceLineItem] = []
+        for (index, group) in groups.enumerated() {
+            let totalDuration = group.entries.reduce(TimeInterval.zero) { $0 + $1.duration }
+            let hours = RoundingService.roundedHours(duration: totalDuration, rule: roundingRule)
+            let rate = group.project.hourlyRate ?? 0
+
+            let item = InvoiceLineItem(
+                descriptionText: group.project.name,
+                quantity: hours,
+                unitPrice: rate,
+                sortOrder: index
+            )
             item.invoice = invoice
             context.insert(item)
 
-            // Link time entries to this line item
-            let projectEntries = entriesByProject.values.first(where: { entries in
-                entries.first?.project?.name == item.descriptionText
-            }) ?? []
-            for entry in projectEntries {
+            for entry in group.entries {
                 var existing = entry.invoiceLineItems ?? []
                 existing.append(item)
                 entry.invoiceLineItems = existing
             }
-            var itemEntries = item.timeEntries ?? []
-            itemEntries.append(contentsOf: projectEntries)
-            item.timeEntries = itemEntries
+            item.timeEntries = group.entries
+
+            lineItems.append(item)
         }
 
         invoice.lineItems = lineItems
